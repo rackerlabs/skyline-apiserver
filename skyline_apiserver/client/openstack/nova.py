@@ -42,7 +42,7 @@ async def list_servers(
             session=session,
             global_request_id=global_request_id,
         )
-        return await run_in_threadpool(
+        servers = await run_in_threadpool(
             nc.servers.list,
             search_opts=search_opts,
             marker=marker,
@@ -50,6 +50,12 @@ async def list_servers(
             sort_keys=sort_keys,
             sort_dirs=sort_dirs,
         )
+        results = []
+        for server in servers:
+            if search_opts is not None and search_opts.get("uuid") == server.id:
+                return [server]
+            results.append(server)
+        return results
     except BadRequest as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
