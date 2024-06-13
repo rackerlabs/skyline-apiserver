@@ -35,4 +35,10 @@ RUN git init /opt/skyline_apiserver \
     && rm -rf ~/.cache/pip \
     && mkdir -p /etc/skyline /var/log/skyline /var/lib/skyline
 
+COPY ./etc/gunicorn.py /etc/skyline/gunicorn.py
+COPY ./etc/skyline.yaml.sample /etc/skyline/skyline.yaml
+COPY ./container/start_service.sh /usr/local/bin/start_service.sh
+
 EXPOSE 443
+
+CMD ["start_service.sh"]
