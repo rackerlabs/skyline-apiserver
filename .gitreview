@@ -2,4 +2,8 @@
 host=review.opendev.org
 port=29418
 project=openstack/skyline-apiserver.git
+<<<<<<< HEAD
 defaultbranch=stable/2025.1
+=======
+defaultbranch=stable/2024.2
+>>>>>>> 7118755 (Update .gitreview for stable/2024.2)
