@@ -305,7 +305,7 @@ list_rules = (
     ),
     base.APIRule(
         name="container:get",
-        check_str=("True:%(enforce_new_defaults)s and (rule:container_project_admin or (rule:container_project_member and rule:container_owner) or (rule:container_project_member and  rule:container_is_not_private) or rule:container_acl_read or rule:creator or role:reader)"),
+        check_str=("True:%(enforce_new_defaults)s and (rule:container_project_admin or (rule:container_project_member and rule:container_owner) or (rule:container_project_member and  rule:container_is_not_private) or rule:container_acl_read or rule:creator)"),
         description="Retrieves a single container.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/v1/containers/{container-id}"}],
