@@ -174,10 +174,11 @@ async def login(
     ),
 ) -> schemas.Profile:
     region = credential.region or CONF.openstack.default_region
+    domain=credential.domain or CONF.openstack.user_default_domain
     try:
         project_scope, unscope_token, default_project_id = await _get_projects_and_unscope_token(
             region=region,
-            domain=credential.domain,
+            domain=domain,
             username=credential.username,
             password=credential.password,
             project_enabled=True,
@@ -207,6 +208,14 @@ async def login(
         response.set_cookie(constants.TIME_EXPIRED_KEY, str(profile.exp))
         return profile
 
+@router.get("/config", response_model=Dict[str,str])
+async def get_domain_config() -> Dict[str,str]:
+    """
+    returns user default domain to skyline console
+    """
+    return {
+            "user_default_domain": CONF.openstack.user_default_domain,
+    }
 
 @router.get(
     "/sso",
