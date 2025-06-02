@@ -223,7 +223,7 @@ async def get_domain_config(request: Request) -> UserDefaultDomain:
 
 @router.get(
     "/sso",
-    description="SSO configuration.",
+    description="SSO configuration Test.",
     responses={
         200: {"model": schemas.SSO},
     },
