@@ -208,14 +208,18 @@ async def login(
         response.set_cookie(constants.TIME_EXPIRED_KEY, str(profile.exp))
         return profile
 
-@router.get("/config", response_model=Dict[str,str])
-async def get_domain_config() -> Dict[str,str]:
-    """
-    returns user default domain to skyline console
-    """
-    return {
-            "user_default_domain": CONF.openstack.user_default_domain,
-    }
+@router.get(
+        "/config",
+        description="User default Domain",
+        responses={
+            200: {"model": UserDefaultDomain},
+        },
+        response_model=UserDefaultDomain,
+        status_code=status.HTTP_200_OK,
+        response_description="OK",
+)
+async def get_domain_config(request: Request) -> UserDefaultDomain:
+    return UserDefaultDomain(user_default_domain=CONF.openstack.user_default_domain)
 
 @router.get(
     "/sso",
