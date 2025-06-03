@@ -212,14 +212,14 @@ async def login(
         "/config",
         description="User default Domain",
         responses={
-            200: {"model": UserDefaultDomain},
+            200: {"model": schemas.UserDefaultDomain},
         },
-        response_model=UserDefaultDomain,
+        response_model=schemas.UserDefaultDomain,
         status_code=status.HTTP_200_OK,
         response_description="OK",
 )
-async def get_domain_config(request: Request) -> UserDefaultDomain:
-    return UserDefaultDomain(user_default_domain=CONF.openstack.user_default_domain)
+async def get_domain_config(request: Request) -> schemas.UserDefaultDomain:
+    return schemas.UserDefaultDomain(user_default_domain=CONF.openstack.user_default_domain)
 
 @router.get(
     "/sso",
