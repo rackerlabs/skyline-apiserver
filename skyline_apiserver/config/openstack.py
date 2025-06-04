@@ -192,8 +192,8 @@ sso_region = Opt(
     default="RegionOne",
 )
 
-user_default_domain = Opt(
-    name="user_default_domain",
+default_domain = Opt(
+    name="default_domain",
     description="skyline user's default domain",
     schema=StrictStr,
     default="Default",
@@ -220,7 +220,7 @@ ALL_OPTS = (
     service_mapping,
     extension_mapping,
     reclaim_instance_interval,
-    user_default_domain,
+    default_domain,
 )
 
 __all__ = ("GROUP_NAME", "ALL_OPTS")

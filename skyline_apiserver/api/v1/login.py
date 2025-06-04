@@ -174,8 +174,9 @@ async def login(
     ),
 ) -> schemas.Profile:
     region = credential.region or CONF.openstack.default_region
-    domain=credential.domain or CONF.openstack.user_default_domain
+    domain=credential.domain or CONF.openstack.default_domain
     try:
+        LOG.info('Fetching project_scope, unscope_token, default_project_id')
         project_scope, unscope_token, default_project_id = await _get_projects_and_unscope_token(
             region=region,
             domain=domain,
@@ -183,21 +184,25 @@ async def login(
             password=credential.password,
             project_enabled=True,
         )
+        LOG.info('After Fetching project_scope, unscope_token, default_project_id')
 
         if default_project_id not in [i.id for i in project_scope]:
             default_project_id = None
+            LOG.info('Inside default_project_id not in [i.id for i in project_scope]')
+        LOG.info('Fetching project_scope_token')
         project_scope_token = await get_project_scope_token(
             keystone_token=unscope_token,
             region=region,
             project_id=default_project_id or project_scope[0].id,
         )
-
+        LOG.info('After Fetching project_scope_token')
         profile = await generate_profile(
             keystone_token=project_scope_token,
             region=region,
         )
-
+        LOG.info('After generate_profile')
         profile = await _patch_profile(profile, x_openstack_request_id)
+        LOG.info('_patch_profile')
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -219,11 +224,11 @@ async def login(
         response_description="OK",
 )
 async def get_domain_config(request: Request) -> schemas.UserDefaultDomain:
-    return schemas.UserDefaultDomain(user_default_domain=CONF.openstack.user_default_domain)
+    return schemas.UserDefaultDomain(default_domain=CONF.openstack.default_domain)
 
 @router.get(
     "/sso",
-    description="SSO configuration Test.",
+    description="SSO configuration.",
     responses={
         200: {"model": schemas.SSO},
     },

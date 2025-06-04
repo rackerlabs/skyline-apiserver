@@ -73,7 +73,7 @@ file ``skyline.yaml.sample`` in ``etc`` directory.
       system_user_domain: Default
       system_user_name: skyline
       system_user_password: ''
-      user_default_domain: Default
+      default_domain: Default
     setting:
       base_settings:
       - flavor_families
