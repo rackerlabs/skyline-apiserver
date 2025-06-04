@@ -119,4 +119,4 @@ class SSO(BaseModel):
     protocols: List[SSOInfo]
 
 class UserDefaultDomain(BaseModel):
-    user_default_domain: str
+    default_domain: str
