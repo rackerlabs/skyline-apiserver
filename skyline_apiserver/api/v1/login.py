@@ -106,7 +106,7 @@ async def _get_projects_and_unscope_token(
 
     if project_enabled:
         project_scope = [scope for scope in project_scope if scope.enabled]
-    LOG.inf('After the project_enabled checks')
+    LOG.info('After the project_enabled checks')
     if not project_scope:
         raise Exception("You are not authorized for any projects or domains.")
 
@@ -176,9 +176,9 @@ async def login(
     ),
 ) -> schemas.Profile:
     region = credential.region or CONF.openstack.default_region
-    LOG.info('credential.domain is: ',credential.domain)
+    LOG.info(f'credential.domain is: {credential.domain}')
     domain=credential.domain or CONF.openstack.default_domain
-    LOG.info('domain is: ',domain)
+    LOG.info(f'domain is: {domain}')
     try:
         LOG.info('Fetching project_scope, unscope_token, default_project_id')
         project_scope, unscope_token, default_project_id = await _get_projects_and_unscope_token(
