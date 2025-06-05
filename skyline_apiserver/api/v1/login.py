@@ -81,7 +81,7 @@ async def _get_projects_and_unscope_token(
             token=token,
             reauthenticate=False,
         )
-    LOG.info('After getting the Token')
+        LOG.info('After getting the Token')
     else:
         unscope_auth = Password(  # type: ignore
             auth_url=auth_url,
