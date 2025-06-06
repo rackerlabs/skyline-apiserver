@@ -68,20 +68,17 @@ async def _get_projects_and_unscope_token(
     token: Optional[str] = None,
     project_enabled: bool = False,
 ) -> Tuple[List[Any], str, Union[str, None]]:
-    LOG.info('Getting the auth url')
     auth_url = await utils.get_endpoint(
         region=region,
         service="identity",
         session=get_system_session(),
     )
-    LOG.info('Getting the token inside _get_projects_and_unscope_token')
     if token:
         unscope_auth = Token(
             auth_url=auth_url,
             token=token,
             reauthenticate=False,
         )
-        LOG.info('After getting the Token')
     else:
         unscope_auth = Password(
             auth_url=auth_url,
@@ -90,11 +87,9 @@ async def _get_projects_and_unscope_token(
             password=password,
             reauthenticate=False,
         )
-    LOG.info('After else of unscope_auth = Password')
     session = Session(
         auth=unscope_auth, verify=CONF.default.cafile, timeout=constants.DEFAULT_TIMEOUT
     )
-    LOG.info('After creating session')
     unscope_client = KeystoneClient(
         session=session,
         endpoint=auth_url,
@@ -106,12 +101,10 @@ async def _get_projects_and_unscope_token(
 
     if project_enabled:
         project_scope = [scope for scope in project_scope if scope.enabled]
-    LOG.info('After the project_enabled checks')
     if not project_scope:
         raise Exception("You are not authorized for any projects or domains.")
 
     default_project_id = await _get_default_project_id(session, region)
-    LOG.info('Before returning from get_projects_and_unscope_token')
     return project_scope, unscope_token, default_project_id
 
 
@@ -176,11 +169,8 @@ async def login(
     ),
 ) -> schemas.Profile:
     region = credential.region or CONF.openstack.default_region
-    LOG.info(f'credential.domain is: {credential.domain}')
-    domain=credential.domain or CONF.openstack.default_domain
-    LOG.info(f'domain is: {domain}')
+    domain = credential.domain or CONF.openstack.default_domain
     try:
-        LOG.info('Fetching project_scope, unscope_token, default_project_id')
         project_scope, unscope_token, default_project_id = await _get_projects_and_unscope_token(
             region=region,
             domain=domain,
@@ -188,25 +178,19 @@ async def login(
             password=credential.password,
             project_enabled=True,
         )
-        LOG.info('After Fetching project_scope, unscope_token, default_project_id')
 
         if default_project_id not in [i.id for i in project_scope]:
             default_project_id = None
-            LOG.info('Inside default_project_id not in [i.id for i in project_scope]')
-        LOG.info('Fetching project_scope_token')
         project_scope_token = await get_project_scope_token(
             keystone_token=unscope_token,
             region=region,
             project_id=default_project_id or project_scope[0].id,
         )
-        LOG.info('After Fetching project_scope_token')
         profile = await generate_profile(
             keystone_token=project_scope_token,
             region=region,
         )
-        LOG.info('After generate_profile')
         profile = await _patch_profile(profile, x_openstack_request_id)
-        LOG.info('_patch_profile')
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
