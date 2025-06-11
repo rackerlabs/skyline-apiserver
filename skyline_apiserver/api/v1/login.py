@@ -174,10 +174,11 @@ async def login(
     ),
 ) -> schemas.Profile:
     region = credential.region or CONF.openstack.default_region
+    domain = credential.domain or CONF.openstack.default_domain
     try:
         project_scope, unscope_token, default_project_id = await _get_projects_and_unscope_token(
             region=region,
-            domain=credential.domain,
+            domain=domain,
             username=credential.username,
             password=credential.password,
             project_enabled=True,
@@ -207,6 +208,18 @@ async def login(
         response.set_cookie(constants.TIME_EXPIRED_KEY, str(profile.exp))
         return profile
 
+@router.get(
+        "/config",
+        description="User default Domain",
+        responses={
+            200: {"model": schemas.UserDefaultDomain},
+        },
+        response_model=schemas.UserDefaultDomain,
+        status_code=status.HTTP_200_OK,
+        response_description="OK",
+)
+async def get_domain_config(request: Request) -> schemas.UserDefaultDomain:
+    return schemas.UserDefaultDomain(default_domain=CONF.openstack.default_domain)
 
 @router.get(
     "/sso",

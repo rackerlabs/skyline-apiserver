@@ -117,3 +117,6 @@ class SSOInfo(BaseModel):
 class SSO(BaseModel):
     enable_sso: bool
     protocols: List[SSOInfo]
+
+class UserDefaultDomain(BaseModel):
+    default_domain: str
