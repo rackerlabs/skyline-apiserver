@@ -73,6 +73,7 @@ async def _get_projects_and_unscope_token(
         service="identity",
         session=get_system_session(),
     )
+
     if token:
         unscope_auth = Token(
             auth_url=auth_url,
@@ -87,9 +88,11 @@ async def _get_projects_and_unscope_token(
             password=password,  # type: ignore
             reauthenticate=False,
         )
+
     session = Session(
         auth=unscope_auth, verify=CONF.default.cafile, timeout=constants.DEFAULT_TIMEOUT
     )
+
     unscope_client = KeystoneClient(
         session=session,
         endpoint=auth_url,
@@ -101,6 +104,7 @@ async def _get_projects_and_unscope_token(
 
     if project_enabled:
         project_scope = [scope for scope in project_scope if scope.enabled]
+
     if not project_scope:
         raise Exception("You are not authorized for any projects or domains.")
 
@@ -187,10 +191,12 @@ async def login(
             region=region,
             project_id=default_project_id or project_scope[0].id,
         )
+
         profile = await generate_profile(
             keystone_token=project_scope_token,
             region=region,
         )
+
         profile = await _patch_profile(profile, x_openstack_request_id)
     except Exception as e:
         raise HTTPException(
