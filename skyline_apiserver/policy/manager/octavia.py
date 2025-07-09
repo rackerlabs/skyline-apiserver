@@ -135,7 +135,7 @@ list_rules = (
     ),
     base.APIRule(
         name="os_load-balancer_api:flavor-profile:get_all",
-        check_str=("rule:load-balancer:admin"),
+        check_str=("rule:load-balancer:admin or rule:load-balancer:read"),
         description="List Flavor Profiles",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/v2.0/lbaas/flavorprofiles"}],
@@ -156,7 +156,7 @@ list_rules = (
     ),
     base.APIRule(
         name="os_load-balancer_api:flavor-profile:get_one",
-        check_str=("rule:load-balancer:admin"),
+        check_str=("rule:load-balancer:admin or rule:load-balancer:read"),
         description="Show Flavor Profile details",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/v2.0/lbaas/flavorprofiles/{flavor_profile_id}"}],
