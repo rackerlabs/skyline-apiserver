@@ -1035,7 +1035,7 @@ list_rules = (
     ),
     base.APIRule(
         name="volume_extension:types_extra_specs:read_sensitive",
-        check_str=("rule:admin_api"),
+        check_str=("rule:xena_system_admin_or_project_reader"),
         description="Include extra_specs fields that may reveal sensitive information about the deployment that should not be exposed to end users in various volume-type responses that show extra_specs. The ability to make these calls is governed by other policies.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/types"}, {"method": "GET", "path": "/types/{type_id}"}, {"method": "GET", "path": "/types/{type_id}/extra_specs"}, {"method": "GET", "path": "/types/{type_id}/extra_specs/{extra_spec_key}"}],
