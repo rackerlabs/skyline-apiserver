@@ -119,7 +119,6 @@ service_mapping = Opt(
     schema=Dict[StrictStr, StrictStr],
     default={
         "baremetal": "ironic",
-        "block-storage": "cinder",
         "compute": "nova",
         "container": "zun",
         "container-infra": "magnum",
@@ -135,6 +134,7 @@ service_mapping = Opt(
         "orchestration": "heat",
         "placement": "placement",
         "sharev2": "manilav2",
+        "volumev3": "cinder",
     },
 )
 

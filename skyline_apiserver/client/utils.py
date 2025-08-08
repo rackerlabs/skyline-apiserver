@@ -154,7 +154,7 @@ async def cinder_client(
     version: str = constants.CINDER_API_VERSION,
 ) -> HTTPClient:
     # https://service-types.openstack.org/service-types.json
-    endpoint = await get_endpoint(region, "block-storage", session=session)
+    endpoint = await get_endpoint(region, "volumev3", session=session)
     client = CinderClient(
         version=version,
         session=session,
