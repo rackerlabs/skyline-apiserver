@@ -539,3 +539,7 @@ class ComputeServicesResponseBase(BaseModel):
 
 class ComputeServicesResponse(BaseModel):
     services: List[ComputeServicesResponseBase] = Field(..., description="Services list")
+
+
+class NetworksResponse(BaseModel):
+    networks: List[Dict[str, Any]] = Field(..., description="Networks list")

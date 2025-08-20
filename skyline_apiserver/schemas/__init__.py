@@ -25,6 +25,7 @@ from .common import (
 from .contrib import KeystoneEndpoints
 from .extension import (
     ComputeServicesResponse,
+    NetworksResponse,
     PortDeviceOwner,
     PortSortKey,
     PortsResponse,

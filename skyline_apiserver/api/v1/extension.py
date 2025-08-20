@@ -1082,3 +1082,110 @@ async def compute_services(
     )
     services = [Service(service).to_dict() for service in services]
     return schemas.ComputeServicesResponse(**{"services": services})
+
+
+@router.get(
+    "/extension/networks",
+    description="List Networks.",
+    responses={
+        401: {"model": schemas.UnauthorizedMessage},
+        403: {"model": schemas.ForbiddenMessage},
+        500: {"model": schemas.InternalServerErrorMessage},
+    },
+    response_model=schemas.NetworksResponse,
+    status_code=status.HTTP_200_OK,
+    response_description="OK",
+)
+async def list_networks(
+    profile: schemas.Profile = Depends(deps.get_profile_update_jwt),
+    x_openstack_request_id: str = Header(
+        "",
+        alias=constants.INBOUND_HEADER,
+        regex=constants.INBOUND_HEADER_REGEX,
+    ),
+    limit: int = Query(
+        None,
+        description=(
+            "Requests a page size of items. Returns a number of items up to a limit value."
+        ),
+        gt=constants.EXTENSION_API_LIMIT_GT,
+    ),
+    marker: str = Query(None, description="The ID of the last-seen item."),
+    all_projects: bool = Query(None, description="List networks for all projects."),
+    project_id: str = Query(
+        None, description="Filter the list of networks by the given project ID."
+    ),
+    name: str = Query(None, description="Filter the list of networks by the given network name."),
+    shared: bool = Query(None, description="Filter the list of networks by shared status."),
+    router_external: bool = Query(
+        None, 
+        description="Filter the list of networks by external router status.",
+        alias="router:external"
+    ),
+    filter_public_networks: bool = Query(
+        False,
+        description="Filter out public networks (networks with only floatingip/router_gateway subnets)."
+    ),
+) -> schemas.NetworksResponse:
+    current_session = await generate_session(profile=profile)
+
+    kwargs: Dict[str, Any] = {}
+    if limit is not None:
+        kwargs["limit"] = limit
+    if marker is not None:
+        kwargs["marker"] = marker
+    if not all_projects:
+        kwargs["project_id"] = profile.project.id
+    if project_id is not None:
+        kwargs["project_id"] = project_id
+    if name is not None:
+        kwargs["name"] = name
+    if shared is not None:
+        kwargs["shared"] = shared
+    if router_external is not None:
+        kwargs["router:external"] = router_external
+
+    networks_response = await neutron.list_networks(
+        profile=profile,
+        session=current_session,
+        global_request_id=x_openstack_request_id,
+        **kwargs,
+    )
+    
+    networks = networks_response.get("networks", [])
+    
+    # If filtering public networks is requested, filter them out
+    if filter_public_networks:
+        # Get all subnets for filtering
+        subnets_response = await neutron.list_subnets(
+            profile=profile,
+            session=current_session,
+            global_request_id=x_openstack_request_id,
+        )
+        subnets = subnets_response.get("subnets", [])
+        
+        # Filter networks based on subnet service_types
+        filtered_networks = []
+        for network in networks:
+            network_id = network["id"]
+            network_subnets = [s for s in subnets if s["network_id"] == network_id]
+            
+            # Check if network has any eligible subnets (not just public service subnets)
+            eligible_subnets = []
+            for subnet in network_subnets:
+                service_types = subnet.get("service_types", [])
+                if (
+                    "network:floatingip" not in service_types
+                    and "network:router_gateway" not in service_types
+                ):
+                    eligible_subnets.append(subnet)
+            
+            # Only include networks that have at least one eligible subnet
+            if eligible_subnets:
+                # Add the eligible subnets to the network data
+                network["eligible_subnets"] = eligible_subnets
+                filtered_networks.append(network)
+        
+        networks = filtered_networks
+
+    return schemas.NetworksResponse(**{"networks": networks})

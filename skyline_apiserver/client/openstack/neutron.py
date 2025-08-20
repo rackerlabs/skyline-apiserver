@@ -51,6 +51,31 @@ async def list_networks(
         )
 
 
+async def list_subnets(
+    profile: schemas.Profile,
+    session: Session,
+    global_request_id: str,
+    **kwargs: Any,
+) -> Any:
+    try:
+        nc = await utils.neutron_client(
+            session=session,
+            region=profile.region,
+            global_request_id=global_request_id,
+        )
+        return await run_in_threadpool(nc.list_subnets, **kwargs)
+    except Unauthorized as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 async def list_ports(
     session: Session,
     region_name: str,
