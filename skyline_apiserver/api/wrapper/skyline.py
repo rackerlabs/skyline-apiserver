@@ -261,3 +261,9 @@ class Port(APIResourceWrapper):
                 continue
             obj[key] = self._get_value(value)
         return obj
+
+class LoadBalancerProvider(APIResourceWrapper):
+    _attrs_mapping = {
+        "name": "name",
+        "description": "description",
+    }

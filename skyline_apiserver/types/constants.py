@@ -21,6 +21,7 @@ NOVA_API_VERSION = "2.79"
 GLANCE_API_VERSION = "2"
 CINDER_API_VERSION = "3.59"
 NEUTRON_API_VERSION = "2.0"
+OCTAVIA_API_VERSION = "2"
 
 # request_id middleware will set this into openstack.global_request_id environ
 INBOUND_HEADER = "X-Openstack-Request-Id"

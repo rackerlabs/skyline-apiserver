@@ -26,6 +26,7 @@ from keystoneclient.httpclient import HTTPClient
 from neutronclient.v2_0.client import Client as NeutronClient
 from novaclient.client import Client as NovaClient
 from starlette.concurrency import run_in_threadpool
+from octaviaclient.api.v2.octavia import OctaviaAPI as OctaviaClient
 
 from skyline_apiserver import schemas
 from skyline_apiserver.config import CONF
@@ -175,6 +176,21 @@ async def neutron_client(
         version=version,
         session=session,
         endpoint_override=endpoint,
+        global_request_id=global_request_id,
+    )
+    return client
+
+def octavia_client(
+    session: Session,
+    region: str,
+    global_request_id: Optional[str] = None,
+    version: str = constants.OCTAVIA_API_VERSION,
+) -> OctaviaClient:
+    endpoint = get_endpoint(region, "load-balancer", session=session)
+    client = OctaviaClient(
+        version=version,
+        session=session,
+        endpoint=endpoint,
         global_request_id=global_request_id,
     )
     return client

@@ -27,3 +27,4 @@ python-neutronclient>=6.14.1 # Apache-2.0
 python-novaclient>=15.1.1 # Apache-2.0
 keystoneauth1>=3.17.4 # Apache-2.0
 oslo.policy>=2.3.4 # Apache-2.0
+python-octaviaclient>=3.11.1 # Apache-2.0

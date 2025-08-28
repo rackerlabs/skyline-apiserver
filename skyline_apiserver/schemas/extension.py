@@ -24,7 +24,7 @@ SERVERS_LIST_DOCS_LINKS = "https://docs.openstack.org/api-ref/compute/?expanded=
 VOLUMES_LIST_DOCS_LINKS = "https://docs.openstack.org/api-ref/block-storage/v3/index.html?expanded=list-accessible-volumes-with-details-detail#list-accessible-volumes-with-details"  # noqa
 VOLUME_SNAPSHOTS_LIST_DOCS_LINKS = "https://docs.openstack.org/api-ref/block-storage/v3/index.html?expanded=list-snapshots-and-details-detail#list-snapshots-and-details"  # noqa
 PORTS_LIST_DOCS_LINKS = "https://docs.openstack.org/api-ref/network/v2/index.html?expanded=list-ports-detail#list-ports"  # noqa
-
+LOAD_BALANCER_PROVIDER_DOCS_LINKS = "https://docs.openstack.org/api-ref/load-balancer/v2/index.html?expanded=#list-providers"  # noqa
 
 class ServerStatus(str, Enum):
     ACTIVE = "ACTIVE"
@@ -539,3 +539,10 @@ class ComputeServicesResponseBase(BaseModel):
 
 class ComputeServicesResponse(BaseModel):
     services: List[ComputeServicesResponseBase] = Field(..., description="Services list")
+
+class LoadBalancerProvidersResponseBase(BaseModel):
+    name: str = Field(..., description="Provider name")
+    description: str = Field(..., description="Provider description")
+
+class LoadBalancerProvidersResponse(BaseModel):
+    providers: List[LoadBalancerProvidersResponseBase] = Field(..., description="Provider list")

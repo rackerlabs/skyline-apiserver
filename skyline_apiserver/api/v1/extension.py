@@ -32,7 +32,7 @@ from skyline_apiserver.api import deps
 from skyline_apiserver.api.wrapper.openstack import OSPort, OSServer, OSVolume, OSVolumeSnapshot
 from skyline_apiserver.api.wrapper.skyline import Port, Server, Service, Volume, VolumeSnapshot
 from skyline_apiserver.client import utils
-from skyline_apiserver.client.openstack import cinder, glance, keystone, neutron, nova
+from skyline_apiserver.client.openstack import cinder, glance, keystone, neutron, nova, octavia
 from skyline_apiserver.client.utils import generate_session, get_system_session
 from skyline_apiserver.config import CONF
 from skyline_apiserver.log import LOG
@@ -1082,3 +1082,33 @@ async def compute_services(
     )
     services = [Service(service).to_dict() for service in services]
     return schemas.ComputeServicesResponse(**{"services": services})
+
+@router.get(
+    "/extension/load-balancer-providers",
+    description="List load balancer providers",
+    responses={
+        200: {"model": schemas.LoadBalancerProvidersResponse},
+        401: {"model": schemas.UnauthorizedMessage},
+        500: {"model": schemas.InternalServerErrorMessage},
+    },
+    response_model=schemas.LoadBalancerProvidersResponse,
+    status_code=status.HTTP_200_OK,
+    response_description="OK",
+    response_model_exclude_none=True,
+)
+def load_balancer_providers(
+    profile: schemas.Profile = Depends(deps.get_profile_update_jwt),
+    x_openstack_request_id: str = Header(
+        "",
+        alias=constants.INBOUND_HEADER,
+        regex=constants.INBOUND_HEADER_REGEX,
+    ),
+) -> schemas.LoadBalancerProvidersResponse:
+    current_session = generate_session(profile)
+    providers = octavia.list_providers(
+        profile=profile,
+        session=current_session,
+        global_request_id=x_openstack_request_id,
+    )
+    providers_list = providers.get("providers", [])
+    return schemas.LoadBalancerProvidersResponse(**{"providers": providers_list})
