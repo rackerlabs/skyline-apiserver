@@ -1062,7 +1062,7 @@ async def compute_services(
     ),
     host: str = Query(None, description="Filter the list of compute services by the given host."),
 ) -> schemas.ComputeServicesResponse:
-    assert_system_admin_or_reader(
+    assert_system_admin(
         profile=profile,
         exception="Not allowed to get compute services.",
     )
