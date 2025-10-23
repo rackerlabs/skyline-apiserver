@@ -510,14 +510,14 @@ list_rules = (
     ),
     base.APIRule(
         name="volume_extension:qos_specs_manage:get_all",
-        check_str=("rule:admin_api"),
+        check_str=("rule:xena_system_admin_or_project_member"),
         description="List qos specs or list all associations.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/qos-specs"}, {"method": "GET", "path": "/qos-specs/{qos_id}/associations"}],
     ),
     base.APIRule(
         name="volume_extension:qos_specs_manage:get",
-        check_str=("rule:admin_api"),
+        check_str=("rule:xena_system_admin_or_project_member"),
         description="Show qos specs.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/qos-specs/{qos_id}"}],
@@ -706,7 +706,7 @@ list_rules = (
     ),
     base.APIRule(
         name="volume_extension:access_types_qos_specs_id",
-        check_str=("rule:admin_api"),
+        check_str=("rule:xena_system_admin_or_project_member"),
         description="Include the volume type's QoS specifications ID attribute in the volume type list or show requests.  The ability to make these calls is governed by other policies.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/types/{type_id}"}, {"method": "GET", "path": "/types"}],
