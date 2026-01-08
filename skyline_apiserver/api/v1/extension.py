@@ -23,7 +23,7 @@ from typing import Any, Dict, List
 from cinderclient.exceptions import NotFound
 from cinderclient.v3.volumes import Volume as CinderVolume
 from dateutil import parser
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from glanceclient.v2.schemas import SchemaBasedModel as GlanceModel
 from novaclient.v2.servers import Server as NovaServer
 
@@ -37,7 +37,11 @@ from skyline_apiserver.client.utils import generate_session, get_system_session
 from skyline_apiserver.config import CONF
 from skyline_apiserver.log import LOG
 from skyline_apiserver.types import constants
-from skyline_apiserver.utils.roles import assert_system_admin_or_reader, is_system_reader_no_admin
+from skyline_apiserver.utils.roles import (
+    assert_system_admin,
+    assert_system_admin_or_reader,
+    is_system_reader_no_admin,
+)
 
 router = APIRouter()
 
@@ -1043,6 +1047,7 @@ async def list_ports(
     responses={
         200: {"model": schemas.ComputeServicesResponse},
         401: {"model": schemas.UnauthorizedMessage},
+        403: {"model": schemas.ForbiddenMessage},
         500: {"model": schemas.InternalServerErrorMessage},
     },
     response_model=schemas.ComputeServicesResponse,
@@ -1062,10 +1067,7 @@ async def compute_services(
     ),
     host: str = Query(None, description="Filter the list of compute services by the given host."),
 ) -> schemas.ComputeServicesResponse:
-    assert_system_admin_or_reader(
-        profile=profile,
-        exception="Not allowed to get compute services.",
-    )
+    assert_system_admin(profile=profile, exception="Not allowed to get compute services.")
 
     system_session = utils.get_system_session()
 
