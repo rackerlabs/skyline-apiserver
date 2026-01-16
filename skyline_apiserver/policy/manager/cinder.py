@@ -510,14 +510,14 @@ list_rules = (
     ),
     base.APIRule(
         name="volume_extension:qos_specs_manage:get_all",
-        check_str=("rule:xena_system_admin_or_project_member"),
+        check_str=("rule:xena_system_admin_or_project_reader"),
         description="List qos specs or list all associations.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/qos-specs"}, {"method": "GET", "path": "/qos-specs/{qos_id}/associations"}],
     ),
     base.APIRule(
         name="volume_extension:qos_specs_manage:get",
-        check_str=("rule:xena_system_admin_or_project_member"),
+        check_str=("rule:xena_system_admin_or_project_reader"),
         description="Show qos specs.",
         scope_types=["project"],
         operations=[{"method": "GET", "path": "/qos-specs/{qos_id}"}],
