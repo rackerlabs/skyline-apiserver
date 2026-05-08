@@ -15,15 +15,26 @@
 from __future__ import annotations
 
 import time
+import uuid
+from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Union
+from typing import Any, Dict, Optional, Union
 
-from sqlalchemy import Insert, Update, delete, func, insert, select, update
+from sqlalchemy import Insert, Update, delete, func, insert, or_, select, update
 
 from skyline_apiserver.types import Fn
 
 from .base import DB, inject_db
-from .models import RevokedToken, Settings
+from .models import (
+    DeletedExternalMessageBanners,
+    MessageBanners,
+    RevokedToken,
+    Settings,
+)
+
+
+MESSAGE_BANNER_COLUMNS = set(MessageBanners.c.keys())
+MESSAGE_BANNER_UPDATE_COLUMNS = MESSAGE_BANNER_COLUMNS - {"id", "created_at"}
 
 
 def check_db_connected(fn: Fn) -> Any:
@@ -121,3 +132,185 @@ async def delete_setting(key: str) -> Any:
         result = await db.execute(query)
 
     return result
+
+
+def _project_region_conditions(
+    project_id: Optional[str] = None,
+    region: Optional[str] = None,
+) -> list:
+    conditions = []
+    if project_id:
+        conditions.append(
+            or_(
+                MessageBanners.c.project_id.is_(None),
+                MessageBanners.c.project_id == project_id,
+            )
+        )
+    if region:
+        conditions.append(
+            or_(
+                MessageBanners.c.region.is_(None),
+                MessageBanners.c.region == region,
+            )
+        )
+    return conditions
+
+
+@check_db_connected
+async def list_message_banners(
+    project_id: Optional[str] = None,
+    region: Optional[str] = None,
+) -> Any:
+    query = select(MessageBanners).order_by(MessageBanners.c.created_at.desc())
+    conditions = _project_region_conditions(project_id=project_id, region=region)
+    if conditions:
+        query = query.where(*conditions)
+    db = DB.get()
+    async with db.transaction():
+        result = await db.fetch_all(query)
+
+    return result
+
+
+@check_db_connected
+async def list_active_message_banners(
+    project_id: Optional[str] = None,
+    region: Optional[str] = None,
+    message_type: Optional[str] = None,
+    global_only: bool = False,
+) -> Any:
+    now = datetime.now(timezone.utc)
+    conditions = [
+        MessageBanners.c.enabled.is_(True),
+        MessageBanners.c.expires_at > now,
+    ]
+    if message_type:
+        conditions.append(MessageBanners.c.type == message_type)
+    if global_only:
+        conditions.append(MessageBanners.c.project_id.is_(None))
+    elif project_id:
+        conditions.extend(_project_region_conditions(project_id=project_id))
+    if region:
+        conditions.extend(_project_region_conditions(region=region))
+    query = (
+        select(MessageBanners)
+        .where(*conditions)
+        .order_by(MessageBanners.c.created_at.desc())
+    )
+    db = DB.get()
+    async with db.transaction():
+        result = await db.fetch_all(query)
+
+    return result
+
+
+@check_db_connected
+async def get_message_banner(banner_id: str) -> Any:
+    query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
+    db = DB.get()
+    async with db.transaction():
+        result = await db.fetch_one(query)
+
+    return result
+
+
+@check_db_connected
+async def create_message_banner(values: Dict[str, Any]) -> Any:
+    now = datetime.now(timezone.utc)
+    banner_id = values.get("id") or str(uuid.uuid4())
+    filtered_values = {
+        key: value for key, value in values.items() if key in MESSAGE_BANNER_COLUMNS
+    }
+    data = {
+        **filtered_values,
+        "id": banner_id,
+        "created_at": values.get("created_at") or now,
+        "updated_at": values.get("updated_at") or now,
+    }
+    query = insert(MessageBanners).values(**data)
+    get_query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
+    db = DB.get()
+    async with db.transaction():
+        await db.execute(query)
+        result = await db.fetch_one(get_query)
+
+    return result
+
+
+@check_db_connected
+async def update_message_banner(banner_id: str, values: Dict[str, Any]) -> Any:
+    filtered_values = {
+        key: value for key, value in values.items() if key in MESSAGE_BANNER_UPDATE_COLUMNS
+    }
+    data = {
+        **filtered_values,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    query = (
+        update(MessageBanners)
+        .where(MessageBanners.c.id == banner_id)
+        .values(**data)
+    )
+    get_query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
+    db = DB.get()
+    async with db.transaction():
+        await db.execute(query)
+        result = await db.fetch_one(get_query)
+
+    return result
+
+
+@check_db_connected
+async def delete_message_banner(banner_id: str) -> Any:
+    get_query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
+    delete_query = delete(MessageBanners).where(MessageBanners.c.id == banner_id)
+    db = DB.get()
+    async with db.transaction():
+        result = await db.fetch_one(get_query)
+        if (
+            result is not None
+            and result.source != "manual"
+            and result.source_id is not None
+        ):
+            deleted_query = select(DeletedExternalMessageBanners).where(
+                DeletedExternalMessageBanners.c.source == result.source,
+                DeletedExternalMessageBanners.c.source_id == result.source_id,
+            )
+            deleted_record = await db.fetch_one(deleted_query)
+            if deleted_record is None:
+                await db.execute(
+                    insert(DeletedExternalMessageBanners).values(
+                        source=result.source,
+                        source_id=result.source_id,
+                        region=result.region,
+                        deleted_at=datetime.now(timezone.utc),
+                    )
+                )
+        await db.execute(delete_query)
+
+    return result
+
+
+@check_db_connected
+async def sync_servicenow_ext_message_banner(values: Dict[str, Any]) -> Any:
+    source = values["source"]
+    source_id = values["source_id"]
+    deleted_query = select(DeletedExternalMessageBanners).where(
+        DeletedExternalMessageBanners.c.source == source,
+        DeletedExternalMessageBanners.c.source_id == source_id,
+    )
+    get_query = select(MessageBanners).where(
+        MessageBanners.c.source == source,
+        MessageBanners.c.source_id == source_id,
+    )
+    db = DB.get()
+    async with db.transaction():
+        deleted_record = await db.fetch_one(deleted_query)
+        if deleted_record is not None:
+            return None
+        existing = await db.fetch_one(get_query)
+
+    if existing is None:
+        return await create_message_banner(values)
+    values.pop("enabled", None)
+    return await update_message_banner(existing.id, values)
