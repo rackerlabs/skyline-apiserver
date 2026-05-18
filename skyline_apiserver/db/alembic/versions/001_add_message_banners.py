@@ -1,6 +1,14 @@
-# Copyright 2021 99cloud
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# Licensed under the Apache License, Version 2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """add message banners
 
@@ -31,7 +39,6 @@ def upgrade() -> None:
         sa.Column("impacted_service", sa.String(length=255), nullable=True),
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("project_id", sa.String(length=128), nullable=True),
         sa.Column("region", sa.String(length=255), nullable=True),
         sa.Column("source", sa.String(length=32), nullable=False),
         sa.Column("source_id", sa.String(length=255), nullable=True),
@@ -48,21 +55,9 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        op.f("ix_message_banners_start_at"),
-        "message_banners",
-        ["start_at"],
-        unique=False,
-    )
-    op.create_index(
         op.f("ix_message_banners_expires_at"),
         "message_banners",
         ["expires_at"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_message_banners_project_id"),
-        "message_banners",
-        ["project_id"],
         unique=False,
     )
     op.create_index(
@@ -83,33 +78,12 @@ def upgrade() -> None:
         ["source_id"],
         unique=False,
     )
-    op.create_table(
-        "deleted_external_message_banners",
-        sa.Column("source", sa.String(length=32), nullable=False),
-        sa.Column("source_id", sa.String(length=255), nullable=False),
-        sa.Column("region", sa.String(length=255), nullable=True),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("source", "source_id"),
-    )
-    op.create_index(
-        op.f("ix_deleted_external_message_banners_region"),
-        "deleted_external_message_banners",
-        ["region"],
-        unique=False,
-    )
 
 
 def downgrade() -> None:
-    op.drop_index(
-        op.f("ix_deleted_external_message_banners_region"),
-        table_name="deleted_external_message_banners",
-    )
-    op.drop_table("deleted_external_message_banners")
     op.drop_index(op.f("ix_message_banners_source_id"), table_name="message_banners")
     op.drop_index(op.f("ix_message_banners_source"), table_name="message_banners")
     op.drop_index(op.f("ix_message_banners_region"), table_name="message_banners")
-    op.drop_index(op.f("ix_message_banners_project_id"), table_name="message_banners")
     op.drop_index(op.f("ix_message_banners_expires_at"), table_name="message_banners")
-    op.drop_index(op.f("ix_message_banners_start_at"), table_name="message_banners")
     op.drop_index(op.f("ix_message_banners_type"), table_name="message_banners")
     op.drop_table("message_banners")

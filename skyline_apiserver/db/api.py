@@ -18,15 +18,15 @@ import time
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from sqlalchemy import Insert, Update, delete, func, insert, or_, select, update
+from sqlalchemy.sql.elements import ClauseElement
 
 from skyline_apiserver.types import Fn
 
 from .base import DB, inject_db
 from .models import (
-    DeletedExternalMessageBanners,
     MessageBanners,
     RevokedToken,
     Settings,
@@ -134,18 +134,10 @@ async def delete_setting(key: str) -> Any:
     return result
 
 
-def _project_region_conditions(
-    project_id: Optional[str] = None,
+def _region_conditions(
     region: Optional[str] = None,
-) -> list:
-    conditions = []
-    if project_id:
-        conditions.append(
-            or_(
-                MessageBanners.c.project_id.is_(None),
-                MessageBanners.c.project_id == project_id,
-            )
-        )
+) -> List[ClauseElement]:
+    conditions: List[ClauseElement] = []
     if region:
         conditions.append(
             or_(
@@ -158,11 +150,10 @@ def _project_region_conditions(
 
 @check_db_connected
 async def list_message_banners(
-    project_id: Optional[str] = None,
     region: Optional[str] = None,
-) -> Any:
+) -> Sequence[Any]:
     query = select(MessageBanners).order_by(MessageBanners.c.created_at.desc())
-    conditions = _project_region_conditions(project_id=project_id, region=region)
+    conditions = _region_conditions(region=region)
     if conditions:
         query = query.where(*conditions)
     db = DB.get()
@@ -174,24 +165,15 @@ async def list_message_banners(
 
 @check_db_connected
 async def list_active_message_banners(
-    project_id: Optional[str] = None,
     region: Optional[str] = None,
-    message_type: Optional[str] = None,
-    global_only: bool = False,
-) -> Any:
+) -> Sequence[Any]:
     now = datetime.now(timezone.utc)
     conditions = [
         MessageBanners.c.enabled.is_(True),
         MessageBanners.c.expires_at > now,
     ]
-    if message_type:
-        conditions.append(MessageBanners.c.type == message_type)
-    if global_only:
-        conditions.append(MessageBanners.c.project_id.is_(None))
-    elif project_id:
-        conditions.extend(_project_region_conditions(project_id=project_id))
     if region:
-        conditions.extend(_project_region_conditions(region=region))
+        conditions.extend(_region_conditions(region=region))
     query = (
         select(MessageBanners)
         .where(*conditions)
@@ -205,7 +187,7 @@ async def list_active_message_banners(
 
 
 @check_db_connected
-async def get_message_banner(banner_id: str) -> Any:
+async def get_message_banner(banner_id: str) -> Optional[Any]:
     query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
     db = DB.get()
     async with db.transaction():
@@ -215,7 +197,7 @@ async def get_message_banner(banner_id: str) -> Any:
 
 
 @check_db_connected
-async def create_message_banner(values: Dict[str, Any]) -> Any:
+async def create_message_banner(values: Dict[str, Any]) -> Optional[Any]:
     now = datetime.now(timezone.utc)
     banner_id = values.get("id") or str(uuid.uuid4())
     filtered_values = {
@@ -238,7 +220,7 @@ async def create_message_banner(values: Dict[str, Any]) -> Any:
 
 
 @check_db_connected
-async def update_message_banner(banner_id: str, values: Dict[str, Any]) -> Any:
+async def update_message_banner(banner_id: str, values: Dict[str, Any]) -> Optional[Any]:
     filtered_values = {
         key: value for key, value in values.items() if key in MESSAGE_BANNER_UPDATE_COLUMNS
     }
@@ -261,56 +243,30 @@ async def update_message_banner(banner_id: str, values: Dict[str, Any]) -> Any:
 
 
 @check_db_connected
-async def delete_message_banner(banner_id: str) -> Any:
+async def delete_message_banner(banner_id: str) -> Optional[Any]:
     get_query = select(MessageBanners).where(MessageBanners.c.id == banner_id)
     delete_query = delete(MessageBanners).where(MessageBanners.c.id == banner_id)
     db = DB.get()
     async with db.transaction():
         result = await db.fetch_one(get_query)
-        if (
-            result is not None
-            and result.source != "manual"
-            and result.source_id is not None
-        ):
-            deleted_query = select(DeletedExternalMessageBanners).where(
-                DeletedExternalMessageBanners.c.source == result.source,
-                DeletedExternalMessageBanners.c.source_id == result.source_id,
-            )
-            deleted_record = await db.fetch_one(deleted_query)
-            if deleted_record is None:
-                await db.execute(
-                    insert(DeletedExternalMessageBanners).values(
-                        source=result.source,
-                        source_id=result.source_id,
-                        region=result.region,
-                        deleted_at=datetime.now(timezone.utc),
-                    )
-                )
         await db.execute(delete_query)
-
     return result
 
 
 @check_db_connected
-async def sync_servicenow_ext_message_banner(values: Dict[str, Any]) -> Any:
+async def sync_rss_feed_ext_message_banner(values: Dict[str, Any]) -> Optional[Any]:
     source = values["source"]
     source_id = values["source_id"]
-    deleted_query = select(DeletedExternalMessageBanners).where(
-        DeletedExternalMessageBanners.c.source == source,
-        DeletedExternalMessageBanners.c.source_id == source_id,
-    )
     get_query = select(MessageBanners).where(
         MessageBanners.c.source == source,
         MessageBanners.c.source_id == source_id,
     )
     db = DB.get()
     async with db.transaction():
-        deleted_record = await db.fetch_one(deleted_query)
-        if deleted_record is not None:
-            return None
         existing = await db.fetch_one(get_query)
 
     if existing is None:
         return await create_message_banner(values)
-    values.pop("enabled", None)
-    return await update_message_banner(existing.id, values)
+    update_values = values.copy()
+    update_values.pop("enabled", None)
+    return await update_message_banner(existing.id, update_values)

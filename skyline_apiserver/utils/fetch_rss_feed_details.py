@@ -1,5 +1,3 @@
-# Copyright 2021 99cloud
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,13 +15,12 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-from datetime import datetime, timezone
-from html import unescape
-from html.parser import HTMLParser
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree
 
 import httpx
+from bs4 import BeautifulSoup
 
 from skyline_apiserver.log import LOG
 
@@ -36,44 +33,8 @@ OUTAGE_RE = re.compile(r"\bOUT\d+\b")
 CHANGE_RE = re.compile(r"\bCHG\d+\b")
 
 
-class _TextExtractor(HTMLParser):
-    block_tags = {
-        "br",
-        "div",
-        "li",
-        "p",
-        "section",
-        "table",
-        "tbody",
-        "td",
-        "th",
-        "thead",
-        "tr",
-    }
-
-    def __init__(self):
-        super().__init__()
-        self.parts: List[str] = []
-        self._skip_depth = 0
-
-    def handle_starttag(self, tag, attrs):
-        if tag in {"script", "style"}:
-            self._skip_depth += 1
-        if tag in self.block_tags:
-            self.parts.append("\n")
-
-    def handle_endtag(self, tag):
-        if tag in {"script", "style"} and self._skip_depth:
-            self._skip_depth -= 1
-        if tag in self.block_tags:
-            self.parts.append("\n")
-
-    def handle_data(self, data):
-        if not self._skip_depth:
-            self.parts.append(data)
-
-    def get_text(self) -> str:
-        return unescape("".join(self.parts))
+def _html_to_text(html: str) -> str:
+    return BeautifulSoup(html, "html.parser").get_text(separator="\n")
 
 
 def _env(name: str, default: Optional[str] = None) -> Optional[str]:
@@ -98,12 +59,6 @@ def _feed_url() -> str:
     return _env("RACKSPACE_STATUS_FEED_URL", RACKSPACE_STATUS_FEED_URL)
 
 
-def _html_to_text(html: str) -> str:
-    parser = _TextExtractor()
-    parser.feed(html)
-    return parser.get_text()
-
-
 def _normalize_text(text: str) -> str:
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
     return "\n".join(line for line in lines if line)
@@ -119,7 +74,21 @@ def _parse_date_range(text: str) -> Optional[tuple[datetime, datetime]]:
     matches = DATETIME_RE.findall(text)
     if len(matches) < 2:
         return None
-    return _parse_datetime(matches[0]), _parse_datetime(matches[-1])
+    try:
+        start_at = _parse_datetime(matches[0])
+        expires_at = _parse_datetime(matches[-1])
+    except ValueError:
+        return None
+    if start_at >= expires_at:
+        return None
+    return start_at, expires_at
+
+
+def _parse_single_datetime(text: str) -> Optional[datetime]:
+    match = DATETIME_RE.search(text)
+    if not match:
+        return None
+    return _parse_datetime(match.group(0))
 
 
 def _split_title(title: str) -> List[str]:
@@ -142,22 +111,10 @@ def _normalize_region(region: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", region.upper())
 
 
-def regions_match(title_region: Optional[str], expected_region: Optional[str]) -> bool:
-    if not expected_region:
-        return True
-    if not title_region:
-        return False
+def _extract_source_id(text: str, link: Optional[str], guid: Optional[str] = None) -> str:
+    if guid:
+        return guid
 
-    expected_region = _normalize_region(expected_region)
-    title_regions = [
-        _normalize_region(value)
-        for value in re.split(r"[,/]", title_region)
-        if value.strip()
-    ]
-    return expected_region in title_regions
-
-
-def _extract_source_id(text: str, link: Optional[str]) -> str:
     outage_match = OUTAGE_RE.search(text)
     if outage_match:
         return outage_match.group(0)
@@ -172,7 +129,7 @@ def _extract_source_id(text: str, link: Optional[str]) -> str:
 
 
 def _message_id(source_id: str) -> str:
-    return f"rackspace-status-{source_id}"
+    return f"rss-feed-{source_id}"
 
 
 def _message_type(text: str) -> str:
@@ -183,7 +140,10 @@ def _message_type(text: str) -> str:
 
 def _message_text(title: str, description: str) -> str:
     match = re.search(r"\bRackspace will\b", description, re.IGNORECASE)
-    message = description[match.start() :] if match else description
+    if match is not None:
+        message = description[match.start():]
+    else:
+        message = description
     message = DATETIME_RE.sub("", message).strip()
     return message or title
 
@@ -203,15 +163,24 @@ def _item_to_message_banner_values(
         return None
 
     link = _item_text(item, "link")
+    guid = _item_text(item, "guid")
     raw_description = _item_text(item, "description") or ""
     description = _normalize_text(_html_to_text(raw_description))
     date_range = _parse_date_range(description)
-    if date_range is None:
-        LOG.warning(f"Skipping Rackspace status feed item without date range: {title}")
-        return None
-
-    start_at, expires_at = date_range
-    source_id = _extract_source_id(description, link)
+    if date_range is not None:
+        start_at, expires_at = date_range
+    else:
+        single_dt = _parse_single_datetime(description)
+        now = datetime.now(timezone.utc)
+        if single_dt is not None and single_dt > now:
+            LOG.info(f"Only start_at found for RSS item, expires 1 hour after start: {title}")
+            start_at = single_dt
+            expires_at = single_dt + timedelta(hours=1)
+        else:
+            LOG.info(f"No valid date range found for RSS item, applying 1-hour TTL: {title}")
+            start_at = None
+            expires_at = now + timedelta(hours=1)
+    source_id = _extract_source_id(description, link, guid)
     item_region = _title_region(title)
     return {
         "id": _message_id(source_id),
@@ -221,16 +190,15 @@ def _item_to_message_banner_values(
         "impacted_service": RACKSPACE_STATUS_PRODUCT,
         "start_at": start_at,
         "expires_at": expires_at,
-        "project_id": None,
         "region": item_region,
-        "source": "rackspace_status",
+        "source": "rss_feed",
         "source_id": source_id,
         "source_url": link,
         "enabled": True,
     }
 
 
-async def fetch_rackspace_status_message_banner_values() -> List[Dict[str, Any]]:
+async def fetch_rss_feed_message_banner_values() -> List[Dict[str, Any]]:
     """Fetch OpenStack Flex RSS feed items as DB-ready banner values."""
 
     try:

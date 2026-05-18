@@ -1,5 +1,3 @@
-# Copyright 2021 99cloud
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,14 +22,14 @@ from fastapi.routing import APIRouter
 from skyline_apiserver import schemas
 from skyline_apiserver.api import deps
 from skyline_apiserver.db import api as db_api
-from skyline_apiserver.utils.rackspace_status import (
-    fetch_rackspace_status_message_banner_values,
+from skyline_apiserver.utils.fetch_rss_feed_details import (
+    fetch_rss_feed_message_banner_values,
 )
 from skyline_apiserver.utils.roles import assert_system_admin
 
 router = APIRouter()
-RACKSPACE_STATUS_SYNC_INTERVAL = 300
-_rackspace_status_last_sync = 0.0
+RSS_FEED_SYNC_INTERVAL = 300
+_rss_feed_last_sync = 0.0
 
 
 def _format_message_banner(message_banner) -> schemas.MessageBanner:
@@ -60,20 +58,22 @@ async def _assert_message_banner_exist(banner_id: str):
     return message_banner
 
 
-def _model_dump(model) -> dict:
-    return model.model_dump()
+def _model_dump(model, exclude_unset: bool = False) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump(exclude_unset=exclude_unset)
+    return model.dict(exclude_unset=exclude_unset)
 
 
-async def _sync_rackspace_status_feed(force: bool = False) -> None:
-    global _rackspace_status_last_sync
+async def _sync_rss_feed(force: bool = False) -> None:
+    global _rss_feed_last_sync
 
     now = time.time()
-    if not force and now - _rackspace_status_last_sync < RACKSPACE_STATUS_SYNC_INTERVAL:
+    if not force and now - _rss_feed_last_sync < RSS_FEED_SYNC_INTERVAL:
         return
 
-    for values in await fetch_rackspace_status_message_banner_values():
-        await db_api.sync_servicenow_ext_message_banner(values)
-    _rackspace_status_last_sync = now
+    for values in await fetch_rss_feed_message_banner_values():
+        await db_api.sync_rss_feed_ext_message_banner(values)
+    _rss_feed_last_sync = now
 
 
 def _assert_same_region(message_banner, profile: schemas.Profile) -> None:
@@ -95,18 +95,18 @@ def _manual_message_values(message_banner, profile: schemas.Profile) -> dict:
         )
     values.update(
         {
-            "project_id": profile.project.id,
             "region": region,
             "source": "manual",
             "source_id": None,
             "source_url": None,
+            "enabled": True,
         }
     )
     return values
 
 
 def _message_update_values(message_banner, existing_message_banner, profile) -> dict:
-    values = _model_dump(message_banner)
+    values = _model_dump(message_banner, exclude_unset=True)
     region = values.get("region") or existing_message_banner.region or profile.region
     if region != profile.region:
         raise HTTPException(
@@ -136,6 +136,27 @@ def _message_update_values(message_banner, existing_message_banner, profile) -> 
 
 
 @router.get(
+    "/message-banners/public",
+    description="Get active message banners (no auth required). For login page display.",
+    responses={
+        200: {"model": schemas.MessageBanners},
+    },
+    response_model=schemas.MessageBanners,
+    status_code=status.HTTP_200_OK,
+    response_description="OK",
+)
+async def list_public_message_banners(
+    region: str = None,
+) -> schemas.MessageBanners:
+    from skyline_apiserver.config import CONF
+
+    await _sync_rss_feed()
+    banner_region = region or CONF.openstack.default_region
+    banners = await db_api.list_active_message_banners(region=banner_region)
+    return _format_message_banners(banners)
+
+
+@router.get(
     "/message-banners/active",
     description="Get active dashboard message banners.",
     responses={
@@ -149,10 +170,8 @@ def _message_update_values(message_banner, existing_message_banner, profile) -> 
 async def list_active_message_banners(
     profile: schemas.Profile = Depends(deps.get_profile_update_jwt),
 ) -> schemas.MessageBanners:
-    project_id = profile.project.id
-    await _sync_rackspace_status_feed()
+    await _sync_rss_feed()
     banners = await db_api.list_active_message_banners(
-        project_id=project_id,
         region=profile.region,
     )
     return _format_message_banners(banners)
@@ -177,7 +196,7 @@ async def list_message_banners(
         profile=profile,
         exception="Not allowed to list message banners.",
     )
-    await _sync_rackspace_status_feed()
+    await _sync_rss_feed()
     banners = await db_api.list_message_banners(region=profile.region)
     return _format_message_banners(banners)
 
@@ -288,5 +307,10 @@ async def delete_message_banner(
     )
     existing_message_banner = await _assert_message_banner_exist(banner_id)
     _assert_same_region(existing_message_banner, profile)
+    if existing_message_banner.source != "manual":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="RSS feed banners cannot be deleted.",
+        )
     deleted_message_banner = await db_api.delete_message_banner(banner_id)
     return _format_message_banner(deleted_message_banner)

@@ -51,9 +51,8 @@ MessageBanners = Table(
     Column("title", String(length=255), nullable=True),
     Column("message", Text, nullable=False),
     Column("impacted_service", String(length=255), nullable=True),
-    Column("start_at", DateTime(timezone=True), nullable=True, index=True),
+    Column("start_at", DateTime(timezone=True), nullable=True),
     Column("expires_at", DateTime(timezone=True), nullable=False, index=True),
-    Column("project_id", String(length=128), nullable=True, index=True),
     Column("region", String(length=255), nullable=True, index=True),
     Column("source", String(length=32), nullable=False, index=True),
     Column("source_id", String(length=255), nullable=True, index=True),
@@ -61,13 +60,4 @@ MessageBanners = Table(
     Column("enabled", Boolean, nullable=False, default=True),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
-)
-
-DeletedExternalMessageBanners = Table(
-    "deleted_external_message_banners",
-    METADATA,
-    Column("source", String(length=32), nullable=False, primary_key=True),
-    Column("source_id", String(length=255), nullable=False, primary_key=True),
-    Column("region", String(length=255), nullable=True, index=True),
-    Column("deleted_at", DateTime(timezone=True), nullable=False),
 )
