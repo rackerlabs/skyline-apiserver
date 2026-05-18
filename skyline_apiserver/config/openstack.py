@@ -133,6 +133,7 @@ service_mapping = Opt(
         "object-store": "swift",
         "orchestration": "heat",
         "placement": "placement",
+        "reservation": "blazar",
         "sharev2": "manilav2",
         "volumev3": "cinder",
     },

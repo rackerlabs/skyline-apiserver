@@ -45,6 +45,24 @@ from .extension import (
 from .login import SSO, Credential, Payload, Profile, UserDefaultDomain
 from .policy import Policies, PoliciesRules
 from .policy_manager import Operation, OperationsSchema, ScopeTypesSchema
+from .reservation import (
+    BeforeEndAction,
+    CalendarAllocation,
+    CalendarHostRow,
+    CalendarLeaseRow,
+    CalendarResponse,
+    CalendarRow,
+    FlavorReservation,
+    FloatingIpReservation,
+    HostReservation,
+    LeaseCreate,
+    LeaseEvent,
+    LeaseEventStatus,
+    LeaseEventType,
+    LeaseUpdate,
+    Reservation,
+    ResourceType,
+)
 from .prometheus import (
     PrometheusQueryData,
     PrometheusQueryRangeData,
