@@ -57,6 +57,7 @@ file ``skyline.yaml.sample`` in ``etc`` directory.
         object-store: swift
         orchestration: heat
         placement: placement
+        reservation: blazar
         sharev2: manilav2
         volumev3: cinder
       sso_enabled: false

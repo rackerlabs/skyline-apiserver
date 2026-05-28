@@ -50,6 +50,7 @@ API_PREFIX = "/api/v1"
 SUPPORTED_SERVICE_EPS = {
     # openstack_service: [<entry_point_name>, <entry_point_name>,]
     "barbican": ["barbican"],
+    "blazar": ["blazar"],
     "cinder": ["cinder"],
     "designate": ["designate"],
     "glance": ["glance"],
