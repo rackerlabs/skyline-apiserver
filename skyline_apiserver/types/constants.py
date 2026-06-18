@@ -52,6 +52,7 @@ SUPPORTED_SERVICE_EPS = {
     "barbican": ["barbican"],
     "blazar": ["blazar"],
     "cinder": ["cinder"],
+    "zaqar": ["zaqar"],
     "designate": ["designate"],
     "glance": ["glance"],
     "heat": ["heat"],
