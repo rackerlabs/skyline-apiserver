@@ -3037,6 +3037,11 @@
                         "type": "string",
                         "description": "Image os distro"
                     },
+                    "image_os_admin_user": {
+                        "title": "Image Os Admin User",
+                        "type": "string",
+                        "description": "Image OS admin user"
+                    },
                     "fixed_addresses": {
                         "title": "Fixed Addresses",
                         "type": "array",
@@ -3259,6 +3264,11 @@
                         "title": "Image Os Distro",
                         "type": "string",
                         "description": "Image OS distro"
+                    },
+                    "image_os_admin_user": {
+                        "title": "Image Os Admin User",
+                        "type": "string",
+                        "description": "Image OS admin user"
                     },
                     "fixed_addresses": {
                         "title": "Fixed Addresses",

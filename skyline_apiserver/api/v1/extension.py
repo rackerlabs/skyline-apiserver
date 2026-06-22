@@ -231,7 +231,11 @@ async def list_servers(
         lambda x, y: x + y, task_result[1 + total_image_tasks :], []
     )
     image_mappings = {
-        image.id: {"name": image.name, "image_os_distro": getattr(image, "os_distro", None)}
+        image.id: {
+            "name": image.name,
+            "image_os_distro": getattr(image, "os_distro", None),
+            "image_os_admin_user": getattr(image, "os_admin_user", None),
+        }
         for image in list(images)
     }
     ser_image_mappings = {}
@@ -243,6 +247,7 @@ async def list_servers(
                     "image": image_meta.get("image_id"),
                     "image_name": image_meta.get("image_name"),
                     "image_os_distro": image_meta.get("os_distro"),
+                    "image_os_admin_user": image_meta.get("os_admin_user"),
                 }
 
     for server in result:
@@ -254,18 +259,23 @@ async def list_servers(
                 "image": ser_image_mapping["image"],
                 "image_name": ser_image_mapping["image_name"],
                 "image_os_distro": ser_image_mapping["image_os_distro"],
+                "image_os_admin_user": ser_image_mapping["image_os_admin_user"],
             }
         elif server["image"]:
+            image_mapping = image_mappings.get(server["image"], {})
             values = {
                 "image": server["image"],
-                "image_name": image_mappings.get(server["image"], {}).get("name", ""),
-                "image_os_distro": image_mappings.get(server["image"], {}).get(
-                    "image_os_distro",
-                    "",
-                ),
+                "image_name": image_mapping.get("name", ""),
+                "image_os_distro": image_mapping.get("image_os_distro", ""),
+                "image_os_admin_user": image_mapping.get("image_os_admin_user"),
             }
         else:
-            values = {"image": None, "image_name": None, "image_os_distro": None}
+            values = {
+                "image": None,
+                "image_name": None,
+                "image_os_distro": None,
+                "image_os_admin_user": None,
+            }
         server.update(values)
     return schemas.ServersResponse(**{"servers": result})
 
@@ -443,7 +453,11 @@ async def list_recycle_servers(
         lambda x, y: x + y, task_result[1 + total_image_tasks :], []
     )
     image_mappings = {
-        image.id: {"name": image.name, "image_os_distro": getattr(image, "os_distro", None)}
+        image.id: {
+            "name": image.name,
+            "image_os_distro": getattr(image, "os_distro", None),
+            "image_os_admin_user": getattr(image, "os_admin_user", None),
+        }
         for image in list(images)
     }
     ser_image_mappings = {}
@@ -455,6 +469,7 @@ async def list_recycle_servers(
                     "image": image_meta.get("image_id"),
                     "image_name": image_meta.get("image_name"),
                     "image_os_distro": image_meta.get("os_distro"),
+                    "image_os_admin_user": image_meta.get("os_admin_user"),
                 }
 
     for recycle_server in result:
@@ -471,18 +486,23 @@ async def list_recycle_servers(
                 "image": ser_image_mapping["image"],
                 "image_name": ser_image_mapping["image_name"],
                 "image_os_distro": ser_image_mapping["image_os_distro"],
+                "image_os_admin_user": ser_image_mapping["image_os_admin_user"],
             }
         elif recycle_server["image"]:
+            image_mapping = image_mappings.get(recycle_server["image"], {})
             values = {
                 "image": recycle_server["image"],
-                "image_name": image_mappings.get(recycle_server["image"], {}).get("name", ""),
-                "image_os_distro": image_mappings.get(recycle_server["image"], {}).get(
-                    "image_os_distro",
-                    "",
-                ),
+                "image_name": image_mapping.get("name", ""),
+                "image_os_distro": image_mapping.get("image_os_distro", ""),
+                "image_os_admin_user": image_mapping.get("image_os_admin_user"),
             }
         else:
-            values = {"image": None, "image_name": None, "image_os_distro": None}
+            values = {
+                "image": None,
+                "image_name": None,
+                "image_os_distro": None,
+                "image_os_admin_user": None,
+            }
         recycle_server.update(values)
     return schemas.RecycleServersResponse(**{"recycle_servers": result})
 

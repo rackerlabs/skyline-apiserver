@@ -65,6 +65,7 @@ class Server(APIResourceWrapper):
         "image": "image",
         "image_name": "image_name",
         "image_os_distro": "image_os_distro",
+        "image_os_admin_user": "image_os_admin_user",
         "fixed_addresses": "fixed_addresses",
         "floating_addresses": "floating_addresses",
         "flavor": "flavor",

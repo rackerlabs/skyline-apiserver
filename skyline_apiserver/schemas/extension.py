@@ -212,6 +212,7 @@ class ServersResponseBase(BaseModel):
     image: Optional[UUID4] = Field(None, description="Image ID")
     image_name: Optional[str] = Field(None, description="Image name")
     image_os_distro: Optional[str] = Field(None, description="Image OS distro")
+    image_os_admin_user: Optional[str] = Field(None, description="Image OS admin user")
     fixed_addresses: Optional[List] = Field(None, description="Fixed addresses")
     floating_addresses: Optional[List] = Field(None, description="Floating addresses")
 
@@ -286,6 +287,7 @@ class RecycleServersResponseBase(BaseModel):
     image: Optional[UUID4] = Field(None, description="Image id")
     image_name: Optional[str] = Field(None, description="Image name")
     image_os_distro: Optional[str] = Field(None, description="Image os distro")
+    image_os_admin_user: Optional[str] = Field(None, description="Image OS admin user")
     fixed_addresses: Optional[List] = Field(None, description="Fixed addresses")
     floating_addresses: Optional[List] = Field(None, description="Floating addresses")
     deleted_at: Optional[str] = Field(None, description="Deleted at")
