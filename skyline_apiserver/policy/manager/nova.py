@@ -55,7 +55,7 @@ list_rules = (
     ),
     base.APIRule(
         name="os_compute_api:os-admin-actions:reset_state",
-        check_str=("rule:context_is_admin"),
+        check_str=("rule:project_member_or_admin"),
         description="Reset the state of a given server",
         scope_types=["project"],
         operations=[{"method": "POST", "path": "/servers/{server_id}/action (os-resetState)"}],
