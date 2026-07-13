@@ -56,6 +56,7 @@ async def get_endpoints(region: str) -> Dict[str, Any]:
         interface=CONF.openstack.interface_type,
     )
     endpoints = {}
+    has_sharev2 = "sharev2" in catalogs
     for service_type, endpoint in catalogs.items():
         if not endpoint:
             continue
@@ -66,6 +67,8 @@ async def get_endpoints(region: str) -> Dict[str, Any]:
         # - hardcode exclude cinderv2 / volumev2
         # - also check generate_nginux::get_proxy_endpoints()
         service = CONF.openstack.service_mapping.get(service_type)
+        if not service and service_type == "share" and not has_sharev2:
+            service = "manilav2"
         if not service:
             continue
 

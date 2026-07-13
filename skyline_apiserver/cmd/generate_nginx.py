@@ -67,6 +67,11 @@ def get_proxy_endpoints() -> Dict[str, ProxyEndpoint]:
     endpoints_list = ks_client.endpoints.list(interface=CONF.openstack.interface_type)
     service_list = ks_client.services.list()
     services = {s.id: s.type for s in service_list}
+    has_sharev2_by_region = {
+        endpoint.region
+        for endpoint in endpoints_list
+        if services.get(endpoint.service_id) == "sharev2"
+    }
 
     endpoints = {}
     for endpoint in endpoints_list:
@@ -74,6 +79,12 @@ def get_proxy_endpoints() -> Dict[str, ProxyEndpoint]:
         region = endpoint.region
         service_type = services.get(endpoint.service_id)
         service = CONF.openstack.service_mapping.get(service_type)
+        if (
+            service is None
+            and service_type == "share"
+            and region not in has_sharev2_by_region
+        ):
+            service = "manilav2"
         if service is None:
             continue
         if f"{region}-{service_type}" in endpoints:
