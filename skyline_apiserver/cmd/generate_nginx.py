@@ -122,6 +122,31 @@ def get_proxy_endpoints() -> Dict[str, ProxyEndpoint]:
         proxy.host = url.netloc
         endpoints[f"{region}-{service_type}"] = proxy
 
+    qonos_endpoint = (CONF.openstack.qonos_endpoint or "").strip()
+    if qonos_endpoint:
+        region = CONF.openstack.default_region
+        proxy = ProxyEndpoint(part="", location="", url="", host="")
+        proxy.part = f"# {region} qonos"
+        location = PurePath("/").joinpath(
+            CONF.openstack.nginx_prefix,
+            region.lower(),
+            "qonos",
+        )
+        proxy.location = f"{str(location)}/"
+        raw_url = urlparse(qonos_endpoint)
+        path = ""
+        if raw_url.path:
+            raw_path = PurePath(raw_url.path)
+            if len(raw_path.parts) > 1:
+                if raw_path.match("v[0-9]") or raw_path.match("v[0-9][.][0-9]"):
+                    path = "" if str(raw_path.parents[0]) == "/" else str(raw_path.parents[0])
+                else:
+                    path = str(raw_path)
+        url = raw_url._replace(path=f"{str(path)}/")
+        proxy.url = url.geturl()
+        proxy.host = url.netloc
+        endpoints[f"{region}-qonos"] = proxy
+
     return dict(sorted(endpoints.items(), key=lambda d: d[0]))
 
 

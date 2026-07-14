@@ -201,6 +201,17 @@ default_domain = Opt(
     default="Default",
 )
 
+qonos_endpoint = Opt(
+    name="qonos_endpoint",
+    description=(
+        "Qonos API endpoint URL. Qonos is not registered in Keystone; "
+        "when set, Skyline exposes it under nginx_prefix/<region>/qonos/ "
+        "and injects it into login endpoints."
+    ),
+    schema=StrictStr,
+    default="https://qonos.api.dev.dfw3.rackspacecloud.com/",
+)
+
 GROUP_NAME = __name__.split(".")[-1]
 ALL_OPTS = (
     enforce_new_defaults,
@@ -223,6 +234,7 @@ ALL_OPTS = (
     extension_mapping,
     reclaim_instance_interval,
     default_domain,
+    qonos_endpoint,
 )
 
 __all__ = ("GROUP_NAME", "ALL_OPTS")

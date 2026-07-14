@@ -82,6 +82,11 @@ async def get_endpoints(region: str) -> Dict[str, Any]:
             endpoints[mapping_name] = endpoints["neutron"]
         else:
             LOG.info(f"The {alias} resource could not be found.")
+    if CONF.openstack.qonos_endpoint:
+        path = PurePath("/").joinpath(
+            CONF.openstack.nginx_prefix, region.lower(), "qonos"
+        )
+        endpoints["qonos"] = str(path)
     return endpoints
 
 

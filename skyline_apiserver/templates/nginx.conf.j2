@@ -118,6 +118,10 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header X-Forwarded-Host $host;
             proxy_set_header Host {{ endpoint["host"] }};
+            {% if endpoint["url"].startswith("https") %}
+            proxy_ssl_server_name on;
+            proxy_ssl_name {{ endpoint["host"] }};
+            {% endif %}
         }
         {% endfor %}
     }

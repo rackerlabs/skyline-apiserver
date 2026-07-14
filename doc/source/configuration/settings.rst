@@ -76,7 +76,8 @@ file ``skyline.yaml.sample`` in ``etc`` directory.
       system_user_name: skyline
       system_user_password: ''
       default_domain: Default
-    setting:
+      qonos_endpoint: https://qonos.api.dev.dfw3.rackspacecloud.com/
+  setting:
       base_settings:
       - flavor_families
       - gpu_models
