@@ -65,7 +65,7 @@ openstack:
   system_user_name: skyline
   system_user_password: ''
   default_domain: Default
-  qonos_endpoint: https://qonos.api.dev.dfw3.rackspacecloud.com/
+  qonos_endpoint: ''
 setting:
   base_settings:
   - flavor_families

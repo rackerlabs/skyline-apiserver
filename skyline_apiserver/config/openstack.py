@@ -209,7 +209,7 @@ qonos_endpoint = Opt(
         "and injects it into login endpoints."
     ),
     schema=StrictStr,
-    default="https://qonos.api.dev.dfw3.rackspacecloud.com/",
+    default="",
 )
 
 GROUP_NAME = __name__.split(".")[-1]
