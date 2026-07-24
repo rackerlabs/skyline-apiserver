@@ -145,6 +145,7 @@ class Volume(APIResourceWrapper):
         "availability_zone": "availability_zone",
         "created_at": "created_at",
         "volume_image_metadata": "volume_image_metadata",
+        "metadata": "metadata",
     }
 
 
