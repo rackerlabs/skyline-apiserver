@@ -513,15 +513,19 @@ async def enable_backup(
     )
 
     from skyline_apiserver.client.utils import get_endpoint
+
+    # VM reaches only public endpoints, independent of apiserver interface_type.
     keystone_url = await get_endpoint(
         region=profile.region,
         service="identity",
         session=session,
+        interface="public",
     )
     freezer_url = await get_endpoint(
         region=profile.region,
         service="backup",
         session=session,
+        interface="public",
     )
 
     script = _build_bootstrap_script(

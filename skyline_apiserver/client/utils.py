@@ -86,13 +86,15 @@ async def get_access(session: Session) -> AccessInfoV3:
     return auth.auth_ref  # type: ignore
 
 
-async def get_endpoint(region: str, service: str, session: Session) -> Any:
+async def get_endpoint(
+    region: str, service: str, session: Session, interface: Optional[str] = None
+) -> Any:
     access = await get_access(session=session)
     service_catalog = access.service_catalog
     endpoint = service_catalog.get_urls(
         region_name=region,
         service_type=service,
-        interface=CONF.openstack.interface_type,
+        interface=interface or CONF.openstack.interface_type,
     )
     if not endpoint:
         raise ValueError("Endpoint not found")
