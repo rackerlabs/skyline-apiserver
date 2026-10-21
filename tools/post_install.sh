@@ -6,6 +6,7 @@ INSTALL_PROJECTS="keystone \
     placement \
     nova \
     cinder \
+    cloudkitty \
     glance \
     trove \
     neutron neutron-vpnaas \
