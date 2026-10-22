@@ -31,6 +31,7 @@ openstack:
   nginx_prefix: /api/openstack
   reclaim_instance_interval: 604800
   service_mapping:
+    backup: freezer
     baremetal: ironic
     compute: nova
     container: zun
@@ -47,6 +48,7 @@ openstack:
     object-store: swift
     orchestration: heat
     placement: placement
+    rating: cloudkitty
     reservation: blazar
     sharev2: manilav2
     volumev3: cinder
