@@ -18,7 +18,7 @@ from pathlib import PurePath
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from keystoneauth1.identity.v3 import Password, Token
 from keystoneauth1.session import Session
 from keystoneclient.client import Client as KeystoneClient
@@ -269,25 +269,68 @@ async def get_sso(request: Request) -> schemas.SSO:
     return schemas.SSO(**sso)
 
 
+def _websso_error_response() -> HTMLResponse:
+    # Keystone errors can contain authentication tokens. Keep this page static.
+    response = HTMLResponse(
+        content="""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign-in failed | Skyline</title>
+  <style>
+    body { margin: 0; background: #f5f7fa; color: #1f2937;
+           font-family: system-ui, sans-serif; line-height: 1.6; }
+    main { max-width: 34rem; margin: 10vh auto; padding: 2rem;
+           background: white; border-radius: .5rem; }
+    h1 { line-height: 1.2; }
+    a { color: #005fcc; }
+    @media (max-width: 40rem) { main { margin: 2rem 1rem; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p>Skyline &middot; 401 Unauthorized</p>
+    <h1>Unable to sign in</h1>
+    <p>We could not authenticate your account. Your account may be disabled,
+       your sign-in session may have expired, or you may not have access
+       to an enabled project.</p>
+    <p>Please try signing in again. If the problem continues, contact your
+       administrator to check your account status and project access.</p>
+    <p><a href="/auth/login">Return to sign in</a></p>
+  </main>
+</body>
+</html>""",
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        headers={"Cache-Control": "no-store"},
+    )
+    response.delete_cookie(CONF.default.session_name)
+    response.delete_cookie(constants.TIME_EXPIRED_KEY)
+    return response
+
+
 @router.post(
     "/websso",
     description="Websso",
     responses={
         302: {"class": RedirectResponse},
-        401: {"model": schemas.common.UnauthorizedMessage},
+        401: {"description": "Authentication failed", "content": {"text/html": {}}},
     },
     response_class=RedirectResponse,
     status_code=status.HTTP_302_FOUND,
     response_description="Redirect",
 )
 async def websso(
-    token: str = Form(...),
+    token: Optional[str] = Form(None),
     x_openstack_request_id: str = Header(
         "",
         alias=constants.INBOUND_HEADER,
         regex=constants.INBOUND_HEADER_REGEX,
     ),
-) -> RedirectResponse:
+) -> Response:
+    if not token:
+        return _websso_error_response()
+
     try:
         project_scope, _, default_project_id = await _get_projects_and_unscope_token(
             region=CONF.openstack.sso_region,
@@ -309,11 +352,8 @@ async def websso(
         )
 
         profile = await _patch_profile(profile, x_openstack_request_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+    except Exception:
+        return _websso_error_response()
     else:
         response = RedirectResponse(url="/base/overview", status_code=status.HTTP_302_FOUND)
         response.set_cookie(CONF.default.session_name, profile.toJWTPayload())
